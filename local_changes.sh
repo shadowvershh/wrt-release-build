@@ -44,7 +44,10 @@ cd "$BUILD_DIR"
 if ! grep -q '^src-git small8' feeds.conf.default; then
     echo 'src-git small8 https://github.com/kenzok8/small-package' >> feeds.conf.default
     ./scripts/feeds update small8
-    ./scripts/feeds install -p small8 -a -f
+    # 仅定向安装实际需要的包(与本地构建清单一致), 禁止 -a 全量安装:
+    # small8 里新增了 opkg, -a 会覆盖核心 opkg (其 Makefile 无 host 构建),
+    # 导致 make 报 "No rule to make target 'package/system/opkg/host/compile'"。
+    ./scripts/feeds install -p small8 -f adguardhome chinadns-ng cups ddns-go dns2socks easytier geo2txt geoview haproxy hysteria ipt2socks luci-app-adguardhome luci-app-amlogic luci-app-cloudflarespeedtest luci-app-cupsd luci-app-ddns-go luci-app-easytier luci-app-homeproxy luci-app-istorex luci-app-lucky luci-app-mosdns luci-app-msd_lite luci-app-nikki luci-app-oaf luci-app-openclash luci-app-passwall luci-app-quickstart luci-app-ssr-plus luci-app-store luci-app-tailscale luci-lib-taskd luci-lib-xterm lucky mihomo mosdns msd_lite naiveproxy nikki oaf open-app-filter quickstart shadowsocksr-libev shadowsocks-rust simple-obfs sing-box tailscale taskd tcping trojan-plus tuic-client v2dat v2ray-core v2ray-geodata v2ray-plugin xray-core xray-plugin
 fi
 
 # CI: nss_packages 换用 laipeng668 fork (NSS-12.5-K6.x), 换源需删旧工作树强制重克隆。
