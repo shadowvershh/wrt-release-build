@@ -60,6 +60,12 @@ for d in "$BUILD_DIR/feeds/custom_feed/xray-core" "$BUILD_DIR/feeds/small8/xray-
     fi
 done
 
+# CI: 太乙固件无 WiFi (ath11k 已剔除), 但 qualcommax target 默认包带 wpad-mesh-openssl;
+# 无 WiFi 驱动时 DRIVER_11AX_SUPPORT 关闭, hostapd 无 AX 而 NSS muedca 补丁代码
+# 无宏保护, 导致 wpad-mesh-openssl 必然编译失败。从 target 默认包移除之,
+# 并配合 deconfig 设备包里的 -wpad-mesh-openssl 双保险。
+sed -i 's/uboot-envtools wpad-mesh-openssl/uboot-envtools/' "$BUILD_DIR/target/linux/qualcommax/Makefile"
+
 # CI: nss_packages 换用 laipeng668 fork (NSS-12.5-K6.x), 换源需删旧工作树强制重克隆。
 # 相比 qosmio 上游多 2 个提交:
 #   "Personal Tailor" —— nss-ifb RCU 并发修复 / netlink l2tpv2、LSO 变量名修复 /
