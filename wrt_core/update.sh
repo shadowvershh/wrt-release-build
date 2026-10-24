@@ -73,7 +73,11 @@ stage_pre_install_source_fixes() {
     update_homeproxy
     fix_default_set
     fix_miniupnpd
-    update_golang
+    # 2026-10-24: 停用 sbwml golang 替换 (26.x/27.x 为单变体结构, 会破坏官方
+    # golang1.26/1.27 多版本布局 — packages feed 的 tailscale/telegraf 依赖
+    # golang1.27/host)。官方 lang/golang 现已自带 1.27 变体, xray-core 由
+    # local_changes.sh 钉到 golang1.27/host。
+    # update_golang
     change_dnsmasq2full
     fix_mk_def_depends
 
