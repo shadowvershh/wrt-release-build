@@ -250,6 +250,12 @@ uci commit unblockneteasemusic
 uci set cupsd.config.enabled='0'
 uci commit cupsd
 
+# OpenClash 内核衔接: 系统内 mihomo 软链为 clash_meta, 全新刷机免联网下载内核
+if [ -x /usr/bin/mihomo ] && [ ! -e /etc/openclash/core/clash_meta ]; then
+    mkdir -p /etc/openclash/core
+    ln -sf /usr/bin/mihomo /etc/openclash/core/clash_meta
+fi
+
 # 修复 quickstart 首页向导菜单不显示 (首开时 LuCI 菜单缓存建在 quickstart 进程启动前)
 mkdir -p /etc/init.d
 cat > /etc/init.d/fix_luci_menu <<'FIXEOF'
