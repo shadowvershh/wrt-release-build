@@ -1,0 +1,7 @@
+3 3 * * * /usr/bin/nginx-util 'check_ssl'
+0 0 * * 1 /usr/share/openclash/openclash_geo.sh ipdb #openclash-cron-task
+0 0 * * 1 /usr/share/openclash/openclash_geo.sh geosite #openclash-cron-task
+0 0 * * 1 /usr/share/openclash/openclash_geo.sh geoip #openclash-cron-task
+0 0 * * 1 /usr/share/openclash/openclash_geo.sh geoasn #openclash-cron-task
+0 0 * * 1 /usr/share/openclash/openclash_chnroute.sh #openclash-cron-task
+0 3 * * * /usr/share/unblockneteasemusic/update.sh update_core

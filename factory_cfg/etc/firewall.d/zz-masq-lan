@@ -1,0 +1,27 @@
+#!/bin/sh
+# 旁路由 MASQUERADE —— 2026-09-21 加入
+#
+# 为什么必须要有这条：
+#   本机是单臂旁路由（只有一个 br-lan，进出都走它）。如果不做 SNAT，
+#   客户端出向包的源 IP 保持原样（如 192.168.31.172），主路由 NAT 之后，
+#   回程包会被主路由按「直连路由」直接发给客户端，**绕过本机**。
+#   后果：本机对每一条直连流只看到出向方向，conntrack 永远停在 [UNREPLIED]，
+#   状态机/TPROXY 分流/sniffer 全都只看到一半的连接。
+#   实测（2026-09-21）：修复前手机 223 条流无回程、仅 1 条双向可见；
+#   加上本规则 60 秒后变为 40 / 33。
+#
+# 作用范围：仅对本网段发往非本网段（即出网）的流量做 SNAT，
+#   不影响 LAN 内互访，也不影响走 clash 的流量（那部分由 clash 终结）。
+#
+# 回退：删除本文件并 uci delete firewall.masqlan && uci commit firewall && fw4 reload
+#
+# 幂等：重复执行不会叠加规则。
+
+CHAIN="srcnat"
+TABLE="inet fw4"
+
+[ -d /sys/class/net/br-lan ] || exit 0
+nft list chain $TABLE $CHAIN >/dev/null 2>&1 || exit 0
+nft list chain $TABLE $CHAIN 2>/dev/null | grep -q 'masquerade' && exit 0
+
+nft add rule $TABLE $CHAIN oifname "br-lan" ip saddr 192.168.31.0/24 ip daddr != 192.168.31.0/24 counter masquerade

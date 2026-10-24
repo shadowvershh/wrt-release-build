@@ -1,0 +1,22 @@
+# 本文件已注册为防火墙 include，可在 LuCI 中查看/编辑：
+#   网络 -> 防火墙 -> 自定义规则
+#
+# 【为什么需要】
+# 本机是单臂旁路由（只有一个 br-lan）。若不做 SNAT，客户端出向包源 IP 保持原样
+# （如 192.168.31.172），主路由 NAT 之后回程包会被它按「直连路由」直接发给客户端，
+# 从而【绕过本机】。后果：本机对每一条直连连接只看到出向方向，conntrack 永远停在
+# [UNREPLIED]，连接状态机 / TPROXY 分流 / sniffer 全部只能看到一半。
+# 实测（2026-09-21）：修复前手机 336 条连接里 223 条（66%）只有单方向可见；
+# 修复后双向可见率 96%。
+#
+# 【规则本体】
+# 在 /etc/firewall.d/zz-masq-lan（幂等：已存在 masquerade 就不会重复添加）。
+# 拆成两处是为了同时在 /etc/rc.local 里也挂一份作为冗余保险。
+#
+# 【回退】
+#   rm -f /etc/firewall.d/zz-masq-lan /etc/firewall.user
+#   uci delete firewall.masqlan; uci delete firewall.fwuser; uci commit firewall
+#   fw4 reload
+#
+# 详见排查报告 §10.14 / §10.16
+[ -x /etc/firewall.d/zz-masq-lan ] && sh /etc/firewall.d/zz-masq-lan

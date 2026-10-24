@@ -1,0 +1,42 @@
+
+config defaults
+	option syn_flood '1'
+	option input 'REJECT'
+	option output 'ACCEPT'
+	option forward 'REJECT'
+	option flow_offloading '0'
+	option flow_offloading_hw '0'
+	option fullcone '1'
+	option fullcone6 '0'
+
+config zone
+	option name 'lan'
+	list network 'lan'
+	option input 'ACCEPT'
+	option output 'ACCEPT'
+	option forward 'ACCEPT'
+
+config include 'unblockneteasemusic'
+	option type 'nftables'
+	option path '/var/run/unblockneteasemusic/fw4.nft'
+	option position 'table-post'
+
+config include
+	option type 'script'
+	option path '/etc/firewall.d/zz-masq-lan'
+	option name 'masqlan'
+
+config include
+	option type 'script'
+	option path '/etc/firewall.user'
+	option name 'fwuser'
+
+config include 'AdGuardHome'
+	option type 'script'
+	option path '/usr/share/AdGuardHome/firewall.start'
+	option reload '1'
+
+config include 'openclash'
+	option type 'script'
+	option path '/var/etc/openclash.include'
+
