@@ -52,7 +52,7 @@ fi
 #   "Personal Tailor" —— nss-ifb RCU 并发修复 / netlink l2tpv2、LSO 变量名修复 /
 #     qca-nss-clients 依赖声明补全 / wifi-meshmgr 与固件版本联动;
 #   "Add Linux kernel 6.18 support" —— 新增 6.18 适配补丁, 6.12 构建不受影响。
-# 本配置已显式锁定 NSS_FIRMWARE_VERSION_11_4=y, 不受其固件默认值变化影响。
+# 固件版本由 nss.config 碎片显式选择 12.5 (见该文件内注释), 不受此处默认值影响。
 sed -i 's#^src-git nss_packages .*#src-git nss_packages https://github.com/laipeng668/nss-packages.git#' feeds.conf.default
 rm -rf feeds/nss_packages package/feeds/nss_packages
 ./scripts/feeds update nss_packages
