@@ -46,6 +46,17 @@ if ! grep -q '^src-git small8' feeds.conf.default; then
     ./scripts/feeds update small8
     ./scripts/feeds install -p small8 -a -f
 fi
+
+# CI: nss_packages 换用 laipeng668 fork (NSS-12.5-K6.x), 换源需删旧工作树强制重克隆。
+# 相比 qosmio 上游多 2 个提交:
+#   "Personal Tailor" —— nss-ifb RCU 并发修复 / netlink l2tpv2、LSO 变量名修复 /
+#     qca-nss-clients 依赖声明补全 / wifi-meshmgr 与固件版本联动;
+#   "Add Linux kernel 6.18 support" —— 新增 6.18 适配补丁, 6.12 构建不受影响。
+# 本配置已显式锁定 NSS_FIRMWARE_VERSION_11_4=y, 不受其固件默认值变化影响。
+sed -i 's#^src-git nss_packages .*#src-git nss_packages https://github.com/laipeng668/nss-packages.git#' feeds.conf.default
+rm -rf feeds/nss_packages package/feeds/nss_packages
+./scripts/feeds update nss_packages
+./scripts/feeds install -p nss_packages -a -f
 if [ -d feeds/small8/mihomo ] && [ ! -e package/feeds/small8/mihomo ]; then
     ./scripts/feeds install -p small8 -f mihomo
     echo "local_changes: 已从 small8 安装 mihomo"
