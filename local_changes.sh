@@ -50,16 +50,6 @@ if ! grep -q '^src-git small8' feeds.conf.default; then
     ./scripts/feeds install -p small8 -f adguardhome chinadns-ng cups ddns-go dns2socks easytier geo2txt geoview haproxy hysteria ipt2socks luci-app-adguardhome luci-app-amlogic luci-app-cloudflarespeedtest luci-app-cupsd luci-app-ddns-go luci-app-easytier luci-app-homeproxy luci-app-istorex luci-app-lucky luci-app-mosdns luci-app-msd_lite luci-app-nikki luci-app-oaf luci-app-openclash luci-app-passwall luci-app-quickstart luci-app-ssr-plus luci-app-store luci-app-tailscale luci-lib-taskd luci-lib-xterm lucky mihomo mosdns msd_lite naiveproxy nikki oaf open-app-filter quickstart shadowsocksr-libev shadowsocks-rust simple-obfs sing-box tailscale taskd tcping trojan-plus tuic-client v2dat v2ray-core v2ray-geodata v2ray-plugin xray-core xray-plugin
 fi
 
-# CI: kenzok8 于 2026-10-23 把 xray-core 升到 26.10.21 (go.mod 要求 go >= 1.27),
-# 其 Makefile 用默认 golang/host 变体, 默认版本不够导致编译失败。
-# 显式钉到 golang1.27/host (feeds/packages 已提供 1.26/1.27 两个变体)。
-for d in "$BUILD_DIR/feeds/custom_feed/xray-core" "$BUILD_DIR/feeds/small8/xray-core"; do
-    if [ -f "$d/Makefile" ]; then
-        sed -i 's#^PKG_BUILD_DEPENDS:=golang/host#PKG_BUILD_DEPENDS:=golang1.27/host#' "$d/Makefile"
-        echo "local_changes: xray-core Go 工具链已钉到 1.27 ($d)"
-    fi
-done
-
 # CI: nss_packages 换用 laipeng668 fork (NSS-12.5-K6.x), 换源需删旧工作树强制重克隆。
 # 相比 qosmio 上游多 2 个提交:
 #   "Personal Tailor" —— nss-ifb RCU 并发修复 / netlink l2tpv2、LSO 变量名修复 /
