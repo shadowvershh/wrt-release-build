@@ -267,6 +267,9 @@ uci commit vlmcsd
 uci set unblockneteasemusic.config.enable='1'
 uci commit unblockneteasemusic
 /etc/init.d/unblockneteasemusic enable 2>/dev/null
+# CUPS 打印服务器: 出厂启用 (用户已启用, init 已补 enabled 门控)
+uci set cupsd.config.enabled='1'
+uci commit cupsd
 
 # CUPS 打印服务器: 关掉自启
 # 官方机制: /etc/init.d/cupsd disable 即可(镜像里自带了 /etc/rc.d/S50cupsd, 所以它
