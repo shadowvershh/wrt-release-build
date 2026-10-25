@@ -195,7 +195,7 @@ sed -i 's#^root:[^:]*:#root:$1$tbypass$zpEjhZ84aeu9SYlPOwTXB1:#' /etc/shadow
 #   config_get_bool enabled "config" "enabled" "0"
 #   [ "$enabled" -eq "1" ] || return 1
 # 一旦把标志归零, 即使你在 LuCI 启动项里启用了它也不会运行, 反而破坏官方开关的语义。
-for svc in miniupnpd samba4 sqm easytier lucky autoreboot shadowsocksr \
+for svc in miniupnpd sqm easytier lucky shadowsocksr \
            radius xl2tpd microsocks 3proxy relayd wsdd2; do
     /etc/init.d/$svc disable 2>/dev/null
     /etc/init.d/$svc stop 2>/dev/null
@@ -270,6 +270,10 @@ uci commit unblockneteasemusic
 # CUPS 打印服务器: 出厂启用 (用户已启用, init 已补 enabled 门控)
 uci set cupsd.config.enabled='1'
 uci commit cupsd
+uci set ucitrack.cupsd=service
+uci set ucitrack.cupsd.init='cupsd'
+uci commit ucitrack
+/etc/init.d/cupsd enable
 
 # CUPS 打印服务器: 关掉自启
 # 官方机制: /etc/init.d/cupsd disable 即可(镜像里自带了 /etc/rc.d/S50cupsd, 所以它
