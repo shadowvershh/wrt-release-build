@@ -80,10 +80,6 @@ if [ -d feeds/small8/mihomo ] && [ ! -e package/feeds/small8/mihomo ]; then
     ./scripts/feeds install -p small8 -f mihomo
     echo "local_changes: 已从 small8 安装 mihomo"
 fi
-if [ -d feeds/small8/luci-app-unblockneteasemusic ] && [ ! -e package/feeds/small8/luci-app-unblockneteasemusic ]; then
-    ./scripts/feeds install -p small8 -f
-    echo "local_changes: 已从 small8 安装 luci-app-unblockneteasemusic (网易云解锁)"
-fi
 
 # ---- 3) 旁路由出厂预配置 (uci-defaults, 首次开机执行一次) ----
 # 文件名用 zz_ 前缀是必须的, 不能用 99_:
@@ -239,7 +235,7 @@ for d in "$BUILD_DIR/feeds/custom_feed/cups" "$BUILD_DIR/feeds/small8/cups"; do
 done
 [ "$CUPSD_INIT_PATCHED" = 1 ] && echo "local_changes: cupsd init 已补 enabled 标志检查"
 
-# 修 luci-app-unblockneteasemusic 3.4-r1 的 ACL 路径 bug (只影响状态页显示日志):
+# 修 3.4-r1 的 ACL 路径 bug (只影响状态页显示日志):
 # 它的 ACL 把日志登记为 /var/run/unblockneteasemusic/run.log, 但 /var 是指向 /tmp 的
 # 软链, rpcd 匹配 ACL 时会解析真实路径成 /tmp/run/..., 于是登记项匹配不上 →
 # 状态页读日志被拒, 显示「未知错误：PermissionError: 没有权限」。
