@@ -81,7 +81,7 @@ if [ -d feeds/small8/mihomo ] && [ ! -e package/feeds/small8/mihomo ]; then
     echo "local_changes: 已从 small8 安装 mihomo"
 fi
 if [ -d feeds/small8/luci-app-unblockneteasemusic ] && [ ! -e package/feeds/small8/luci-app-unblockneteasemusic ]; then
-    ./scripts/feeds install -p small8 -f luci-app-unblockneteasemusic
+    ./scripts/feeds install -p small8 -f
     echo "local_changes: 已从 small8 安装 luci-app-unblockneteasemusic (网易云解锁)"
 fi
 
@@ -211,6 +211,13 @@ if [ -f /etc/config/app_filter ] && ! grep -q "^config global" /etc/config/app_f
     printf "config global 'global'
 " >> /etc/config/app_filter
 fi
+
+# ath11k-firmware 幽灵清单修复: ipq60xx target 默认包含但设备包已减号剔除,
+# manifest 列出而镜像缺失, 移除之保持清单一致
+sed -i 's/ath11k-firmware-ipq6018-ddwrt nss-firmware-ipq60xx/nss-firmware-ipq60xx/' "$BUILD_DIR/target/linux/qualcommax/ipq60xx/target.mk"
+# 上游仓库垃圾文件清理 (补丁残片/vim 交换文件会被打包进镜像)
+find "$BUILD_DIR/feeds/small8/luci-app-ssr-plus" -name "*.rej" -delete 2>/dev/null
+find "$BUILD_DIR/feeds/custom_feed/luci-app-oaf" "$BUILD_DIR/feeds/small8/luci-app-oaf" -name "*.swp" -delete 2>/dev/null
 
 # cupsd init 补丁: 原版不读 cupsd.config.enabled 标志, LuCI 勾选框形同虚设
 # (取消勾选后服务照跑)。补上标准 OpenWrt 逻辑: enabled=0 时 start 直接返回。
