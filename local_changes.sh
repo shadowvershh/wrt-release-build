@@ -216,11 +216,11 @@ fi
 # (取消勾选后服务照跑)。补上标准 OpenWrt 逻辑: enabled=0 时 start 直接返回。
 CUPSD_INIT_PATCHED=0
 for d in "$BUILD_DIR/feeds/custom_feed/cups" "$BUILD_DIR/feeds/small8/cups"; do
-    if [ -f "$d/files/etc/init.d/cupsd" ] && ! grep -q "config_get_bool enabled" "$d/files/etc/init.d/cupsd"; then
+    if [ -f "$d/files/cupsd.init" ] && ! grep -q "config_get_bool enabled" "$d/files/cupsd.init"; then
         sed -i '/^start() {$/a\  config_load cupsd
   local enabled
   config_get_bool enabled config enabled 1
-  [ "$enabled" = 0 ] \&\& return 0' "$d/files/etc/init.d/cupsd"
+  [ "$enabled" = 0 ] \&\& return 0' "$d/files/cupsd.init"
         CUPSD_INIT_PATCHED=1
     fi
 done
