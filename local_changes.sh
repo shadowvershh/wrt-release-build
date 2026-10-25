@@ -195,7 +195,7 @@ sed -i 's#^root:[^:]*:#root:$1$tbypass$zpEjhZ84aeu9SYlPOwTXB1:#' /etc/shadow
 #   config_get_bool enabled "config" "enabled" "0"
 #   [ "$enabled" -eq "1" ] || return 1
 # 一旦把标志归零, 即使你在 LuCI 启动项里启用了它也不会运行, 反而破坏官方开关的语义。
-for svc in miniupnpd samba4 sqm easytier lucky appfilter autoreboot shadowsocksr \
+for svc in miniupnpd samba4 sqm easytier lucky autoreboot shadowsocksr \
            radius xl2tpd microsocks 3proxy relayd wsdd2; do
     /etc/init.d/$svc disable 2>/dev/null
     /etc/init.d/$svc stop 2>/dev/null
