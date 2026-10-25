@@ -270,6 +270,8 @@ uci commit unblockneteasemusic
 # CUPS 打印服务器: 出厂启用 (用户已启用, init 已补 enabled 门控)
 uci set cupsd.config.enabled='1'
 uci commit cupsd
+# cupsd 页面保存联动: ucitrack 注册 (勾选保存后自动重启服务, 否则只写配置不生效)
+uci -q delete ucitrack.cupsd
 uci set ucitrack.cupsd=service
 uci set ucitrack.cupsd.init='cupsd'
 uci commit ucitrack
@@ -676,3 +678,29 @@ FACTORYTUNING
 fi
 
 echo "local_changes: 完成"
+
+# ---- 5) Lean luci 客户端流量监测 (旁路由在线主机表格 + 厂商图标) ----
+# 来源: coolsnowwolf/luci openwrt-25.12 (2026-10), 源码固存于仓库 luci-lean/ (无外网依赖)
+# 内容: rpcd conntrack+NSS/ECM 每客户端速率/累计/连接数采样, ARP 发现静态IP设备,
+#       DHCP 租约表升级为 Online Hosts, OUI 厂商图标 (含 fnOS 飞牛NAS识别)
+LL_DST="$BUILD_DIR/feeds/luci"
+if [ -d "$LL_DST/modules/luci-mod-status" ] || [ -d "$LL_DST/modules/luci-mod-status.imm" ]; then
+    # 首次重放时保留原版作 .imm 备份, 之后每次直接覆盖
+    for p in modules/luci-mod-status libs/rpcd-mod-luci; do
+        [ -d "$LL_DST/$p" ] && [ ! -d "$LL_DST/$p.imm" ] && mv "$LL_DST/$p" "$LL_DST/$p.imm"
+        rm -rf "$LL_DST/$p"
+    done
+    cp -a "$REPO_ROOT/luci-lean/modules/luci-mod-status" "$LL_DST/modules/"
+    cp -a "$REPO_ROOT/luci-lean/libs/rpcd-mod-luci"       "$LL_DST/libs/"
+    rm -rf "$LL_DST/applications/luci-app-oui"
+    cp -a "$REPO_ROOT/luci-lean/applications/luci-app-oui" "$LL_DST/applications/"
+    # luci-base 前端特性开关: hasSystemFeature('oui') 为 true 才渲染图标 (固件 httpdoc 根为 /www)
+    UCODE_LUCI="$LL_DST/modules/luci-base/root/usr/share/rpcd/ucode/luci"
+    if [ -f "$UCODE_LUCI" ] && ! grep -q "resources/oui/oui.js" "$UCODE_LUCI"; then
+        sed -i "s|ufpd:       access('/usr/sbin/ufpd') == true,|ufpd:       access('/usr/sbin/ufpd') == true,\n\t\t\toui:        access('/www/luci-static/resources/oui/oui.js') == true,|" "$UCODE_LUCI"
+        echo "local_changes: luci-base ucode 已加 oui 特性检测"
+    fi
+    (cd "$BUILD_DIR" && ./scripts/feeds update -i luci >/dev/null 2>&1 || true
+                 ./scripts/feeds install -f luci-mod-status rpcd-mod-luci luci-app-oui >/dev/null 2>&1 || true)
+    echo "local_changes: luci-lean 客户端流量监测已覆盖 feeds (luci-mod-status/rpcd-mod-luci/luci-app-oui)"
+fi
