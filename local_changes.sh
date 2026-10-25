@@ -214,6 +214,12 @@ fi
 
 # cupsd init 补丁: 原版不读 cupsd.config.enabled 标志, LuCI 勾选框形同虚设
 # (取消勾选后服务照跑)。补上标准 OpenWrt 逻辑: enabled=0 时 start 直接返回。
+# easytier init 补丁: 原版 start_service 不读 easytier.enabled 标志 (同 cupsd 问题)
+for d in "$BUILD_DIR/feeds/custom_feed/luci-app-easytier" "$BUILD_DIR/feeds/small8/luci-app-easytier"; do
+    if [ -f "$d/luci-app-easytier/root/etc/init.d/easytier" ] && ! grep -q "easytier.@easytier.0..enabled" "$d/luci-app-easytier/root/etc/init.d/easytier"; then
+        sed -i '/^start_service() {$/a\  [ "$(uci -q get easytier.@easytier[0].enabled)" = "1" ] || return 0' "$d/luci-app-easytier/root/etc/init.d/easytier"
+    fi
+done
 CUPSD_INIT_PATCHED=0
 for d in "$BUILD_DIR/feeds/custom_feed/cups" "$BUILD_DIR/feeds/small8/cups"; do
     if [ -f "$d/files/cupsd.init" ] && ! grep -q "config_get_bool enabled" "$d/files/cupsd.init"; then
