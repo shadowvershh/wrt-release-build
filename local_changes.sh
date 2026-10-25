@@ -205,6 +205,13 @@ for svc in miniupnpd samba4 sqm easytier lucky appfilter autoreboot shadowsocksr
     /etc/init.d/$svc stop 2>/dev/null
 done
 
+# oafd 修复: /etc/config/app_filter 出厂为空文件(无 uci section), 导致
+# OAF "高级设置"页保存返回 2000 但实际不落盘。补一个全局 section。
+if [ -f /etc/config/app_filter ] && ! grep -q "^config global" /etc/config/app_filter 2>/dev/null; then
+    printf "config global 'global'
+" >> /etc/config/app_filter
+fi
+
 # 修 luci-app-unblockneteasemusic 3.4-r1 的 ACL 路径 bug (只影响状态页显示日志):
 # 它的 ACL 把日志登记为 /var/run/unblockneteasemusic/run.log, 但 /var 是指向 /tmp 的
 # 软链, rpcd 匹配 ACL 时会解析真实路径成 /tmp/run/..., 于是登记项匹配不上 →
