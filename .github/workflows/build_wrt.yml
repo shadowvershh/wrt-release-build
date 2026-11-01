@@ -40,6 +40,15 @@ on:
         required: false
         description: Remove default config fragments, comma separated
         default: ""
+      build_mode:
+        required: false
+        description: Build mode (toolchain = seed toolchain cache only)
+        type: choice
+        default: ""
+        options:
+          - ""
+          - toolchain
+          - debug
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -105,6 +114,7 @@ jobs:
           path: |
             ./action_build/.ccache
             ./action_build/staging_dir
+            ./action_build/dl
           key: ${{ matrix.os }}-${{ inputs.model }}-${{ hashFiles('**/repo_flag') }}-${{ env.ADD_CONFIG_FRAGMENTS_KEY }}-${{ env.REMOVE_CONFIG_FRAGMENTS_KEY }}
           restore-keys: |
             ${{ matrix.os }}-${{ inputs.model }}-${{ hashFiles('**/repo_flag') }}-${{ env.ADD_CONFIG_FRAGMENTS_KEY }}-${{ env.REMOVE_CONFIG_FRAGMENTS_KEY }}-
@@ -149,7 +159,7 @@ jobs:
         env:
           ADD_CONFIG_FRAGMENTS: ${{ inputs.add_fragments }}
           REMOVE_CONFIG_FRAGMENTS: ${{ inputs.remove_fragments }}
-        run: ./build.sh ${{ inputs.model }}
+        run: ./build.sh ${{ inputs.model }} "${{ inputs.build_mode }}"
 
       - name: Delete Old Cache
         run: |
