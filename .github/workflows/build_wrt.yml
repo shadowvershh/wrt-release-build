@@ -61,6 +61,12 @@ jobs:
           sudo -E apt-get clean || true
           df -hT
 
+      - name: Cache apt archives
+        uses: actions/cache@v6.1.0
+        with:
+          path: /var/cache/apt/archives
+          key: apt-archives-ubuntu-24.04-v1
+
       - name: Build System Setup
         run: |
           sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
@@ -95,7 +101,7 @@ jobs:
           path: |
             ./action_build/.ccache
             ./action_build/staging_dir
-          key: ${{ matrix.os }}-${{ inputs.model }}-${{ hashFiles('**/repo_flag') }}-${{ env.ADD_CONFIG_FRAGMENTS_KEY }}-${{ env.REMOVE_CONFIG_FRAGMENTS_KEY }}-${{ env.BUILD_DATE }}
+          key: ${{ matrix.os }}-${{ inputs.model }}-${{ hashFiles('**/repo_flag') }}-${{ env.ADD_CONFIG_FRAGMENTS_KEY }}-${{ env.REMOVE_CONFIG_FRAGMENTS_KEY }}
           restore-keys: |
             ${{ matrix.os }}-${{ inputs.model }}-${{ hashFiles('**/repo_flag') }}-${{ env.ADD_CONFIG_FRAGMENTS_KEY }}-${{ env.REMOVE_CONFIG_FRAGMENTS_KEY }}-
             ${{ matrix.os }}-${{ inputs.model }}-${{ hashFiles('**/repo_flag') }}-
