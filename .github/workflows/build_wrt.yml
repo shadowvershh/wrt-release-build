@@ -1,6 +1,10 @@
 name: Build WRT
 run-name: Build - ${{ inputs.model }}
 
+concurrency:
+  group: build-${{ github.event.inputs.model }}
+  cancel-in-progress: false
+
 on:
   workflow_dispatch:
     inputs:
