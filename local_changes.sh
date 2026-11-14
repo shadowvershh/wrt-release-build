@@ -47,7 +47,7 @@ if ! grep -q '^src-git small8' feeds.conf.default; then
     # 仅定向安装实际需要的包(与本地构建清单一致), 禁止 -a 全量安装:
     # small8 里新增了 opkg, -a 会覆盖核心 opkg (其 Makefile 无 host 构建),
     # 导致 make 报 "No rule to make target 'package/system/opkg/host/compile'"。
-    ./scripts/feeds install -p small8 -f adguardhome chinadns-ng cups ddns-go dns2socks easytier geo2txt geoview haproxy hysteria ipt2socks luci-app-adguardhome luci-app-amlogic luci-app-cloudflarespeedtest luci-app-cupsd luci-app-ddns-go luci-app-easytier luci-app-homeproxy luci-app-istorex luci-app-lucky luci-app-mosdns luci-app-msd_lite luci-app-nikki luci-app-openclash luci-app-passwall luci-app-quickstart luci-app-ssr-plus luci-app-store luci-app-tailscale luci-lib-taskd luci-lib-xterm lucky mihomo mosdns msd_lite naiveproxy nikki quickstart shadowsocksr-libev shadowsocks-rust simple-obfs sing-box tailscale taskd tcping trojan-plus tuic-client v2dat v2ray-core v2ray-geodata v2ray-plugin xray-core xray-plugin
+    ./scripts/feeds install -p small8 -f adguardhome chinadns-ng cups ddns-go dns2socks easytier geo2txt geoview haproxy hysteria ipt2socks luci-app-adguardhome luci-app-amlogic luci-app-cloudflarespeedtest luci-app-cupsd luci-app-ddns-go luci-app-easytier luci-app-homeproxy luci-app-istorex luci-app-mosdns luci-app-msd_lite luci-app-nikki luci-app-openclash luci-app-passwall luci-app-quickstart luci-app-ssr-plus luci-app-store luci-app-tailscale luci-lib-taskd luci-lib-xterm mihomo mosdns msd_lite naiveproxy nikki quickstart shadowsocksr-libev shadowsocks-rust simple-obfs sing-box tailscale taskd tcping trojan-plus tuic-client v2dat v2ray-core v2ray-geodata v2ray-plugin xray-core xray-plugin
 fi
 
 # CI: kenzok8 于 2026-10-23 把 xray-core 升到 26.10.21 (go.mod 要求 go >= 1.27),
@@ -195,7 +195,7 @@ sed -i 's#^root:[^:]*:#root:$1$tbypass$zpEjhZ84aeu9SYlPOwTXB1:#' /etc/shadow
 #   config_get_bool enabled "config" "enabled" "0"
 #   [ "$enabled" -eq "1" ] || return 1
 # 一旦把标志归零, 即使你在 LuCI 启动项里启用了它也不会运行, 反而破坏官方开关的语义。
-for svc in miniupnpd sqm easytier lucky shadowsocksr \
+for svc in miniupnpd sqm easytier shadowsocksr \
            radius xl2tpd microsocks 3proxy relayd wsdd2; do
     /etc/init.d/$svc disable 2>/dev/null
     /etc/init.d/$svc stop 2>/dev/null

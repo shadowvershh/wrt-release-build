@@ -162,7 +162,7 @@ install_custom_feed() {
         v2dat adguardhome luci-app-adguardhome ddns-go \
         luci-app-ddns-go taskd luci-lib-xterm luci-lib-taskd luci-app-store quickstart \
         luci-app-quickstart luci-app-istorex luci-app-cloudflarespeedtest netdata luci-app-netdata \
-        lucky luci-app-lucky luci-app-openclash luci-app-homeproxy luci-app-amlogic \
+        luci-app-openclash luci-app-homeproxy luci-app-amlogic \
         easytier luci-app-easytier \
         msd_lite luci-app-msd_lite cups luci-app-cupsd
     )
@@ -170,7 +170,7 @@ install_custom_feed() {
         cups tcping v2ray-geodata luci-lib-taskd luci-app-openclash
         luci-app-quickstart luci-app-store luci-app-homeproxy luci-app-mosdns
         luci-app-passwall nikki luci-app-nikki mihomo-meta
-        lucky luci-app-lucky luci-app-easytier
+        luci-app-easytier
         luci-app-emmc-health
     )
     local custom_feed_sources=()
