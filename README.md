@@ -140,10 +140,5 @@ https://github.com/kenzok8/small-package.git
 - `wrt_core/modules/`：模块化脚本，包括仓库准备、网络重试、feeds/custom_feed、源码修正、LuCI 修正、服务修正、验证、Docker、CUPS 等静态职责模块。
 - `wrt_core/patches/`：补丁、默认设置、Wi-Fi 初始化、NSS 诊断、PBR 规则和其他构建时注入文件。
 
-## 9. OAF（应用过滤）功能使用说明
+> OAF（应用过滤 / OpenAppFilter）已从固件中移除（2026-11-14），不再安装 `luci-app-oaf` 与 `appfilter`，也没有对应的出厂预设。
 
-使用 OAF（应用过滤）功能前，需先完成以下操作：
-
-1. 打开系统设置 → 启动项 → 定位到「appfilter」
-2. 将「appfilter」当前状态从已禁用更改为已启用
-3. 完成配置后，点击启动按钮激活服务

@@ -47,7 +47,7 @@ if ! grep -q '^src-git small8' feeds.conf.default; then
     # 仅定向安装实际需要的包(与本地构建清单一致), 禁止 -a 全量安装:
     # small8 里新增了 opkg, -a 会覆盖核心 opkg (其 Makefile 无 host 构建),
     # 导致 make 报 "No rule to make target 'package/system/opkg/host/compile'"。
-    ./scripts/feeds install -p small8 -f adguardhome chinadns-ng cups ddns-go dns2socks easytier geo2txt geoview haproxy hysteria ipt2socks luci-app-adguardhome luci-app-amlogic luci-app-cloudflarespeedtest luci-app-cupsd luci-app-ddns-go luci-app-easytier luci-app-homeproxy luci-app-istorex luci-app-lucky luci-app-mosdns luci-app-msd_lite luci-app-nikki luci-app-oaf luci-app-openclash luci-app-passwall luci-app-quickstart luci-app-ssr-plus luci-app-store luci-app-tailscale luci-lib-taskd luci-lib-xterm lucky mihomo mosdns msd_lite naiveproxy nikki oaf open-app-filter quickstart shadowsocksr-libev shadowsocks-rust simple-obfs sing-box tailscale taskd tcping trojan-plus tuic-client v2dat v2ray-core v2ray-geodata v2ray-plugin xray-core xray-plugin
+    ./scripts/feeds install -p small8 -f adguardhome chinadns-ng cups ddns-go dns2socks easytier geo2txt geoview haproxy hysteria ipt2socks luci-app-adguardhome luci-app-amlogic luci-app-cloudflarespeedtest luci-app-cupsd luci-app-ddns-go luci-app-easytier luci-app-homeproxy luci-app-istorex luci-app-lucky luci-app-mosdns luci-app-msd_lite luci-app-nikki luci-app-openclash luci-app-passwall luci-app-quickstart luci-app-ssr-plus luci-app-store luci-app-tailscale luci-lib-taskd luci-lib-xterm lucky mihomo mosdns msd_lite naiveproxy nikki quickstart shadowsocksr-libev shadowsocks-rust simple-obfs sing-box tailscale taskd tcping trojan-plus tuic-client v2dat v2ray-core v2ray-geodata v2ray-plugin xray-core xray-plugin
 fi
 
 # CI: kenzok8 于 2026-10-23 把 xray-core 升到 26.10.21 (go.mod 要求 go >= 1.27),
@@ -201,19 +201,11 @@ for svc in miniupnpd sqm easytier lucky shadowsocksr \
     /etc/init.d/$svc stop 2>/dev/null
 done
 
-# oafd 修复: /etc/config/app_filter 出厂为空文件(无 uci section), 导致
-# OAF "高级设置"页保存返回 2000 但实际不落盘。补一个全局 section。
-if [ -f /etc/config/app_filter ] && ! grep -q "^config global" /etc/config/app_filter 2>/dev/null; then
-    printf "config global 'global'
-" >> /etc/config/app_filter
-fi
-
 # ath11k-firmware 幽灵清单修复: ipq60xx target 默认包含但设备包已减号剔除,
 # manifest 列出而镜像缺失, 移除之保持清单一致
 sed -i 's/ath11k-firmware-ipq6018-ddwrt nss-firmware-ipq60xx/nss-firmware-ipq60xx/' "$BUILD_DIR/target/linux/qualcommax/ipq60xx/target.mk"
 # 上游仓库垃圾文件清理 (补丁残片/vim 交换文件会被打包进镜像)
 find "$BUILD_DIR/feeds/small8/luci-app-ssr-plus" -name "*.rej" -delete 2>/dev/null
-find "$BUILD_DIR/feeds/custom_feed/luci-app-oaf" "$BUILD_DIR/feeds/small8/luci-app-oaf" -name "*.swp" -delete 2>/dev/null
 
 # cupsd init 补丁: 原版不读 cupsd.config.enabled 标志, LuCI 勾选框形同虚设
 # (取消勾选后服务照跑)。补上标准 OpenWrt 逻辑: enabled=0 时 start 直接返回。
@@ -699,6 +691,60 @@ if [ -d "$LL_DST/modules/luci-mod-status" ] || [ -d "$LL_DST/modules/luci-mod-st
     if [ -f "$UCODE_LUCI" ] && ! grep -q "resources/oui/oui.js" "$UCODE_LUCI"; then
         sed -i "s|ufpd:       access('/usr/sbin/ufpd') == true,|ufpd:       access('/usr/sbin/ufpd') == true,\n\t\t\toui:        access('/www/luci-static/resources/oui/oui.js') == true,|" "$UCODE_LUCI"
         echo "local_changes: luci-base ucode 已加 oui 特性检测"
+    fi
+    # luci-mod-status 自上游 4c7262d (2026-10-27) 起, 60_wifi.js 调用 luci-base 新增的
+    # network.getWifiRuntimeIfnames() —— 从 netifd 读 QCA 运行时 VAP 名, 不主动探测
+    # 无线驱动。immortalwrt 的 luci-base 还没有这个 API, 缺了会让「无线」状态页抛
+    # TypeError (network.getWifiRuntimeIfnames is not a function), 这里按上游原文补进去。
+    NET_JS="$LL_DST/modules/luci-base/htdocs/luci-static/resources/network.js"
+    if [ -f "$NET_JS" ] && ! grep -q "getWifiRuntimeIfnames" "$NET_JS"; then
+        python3 - "$NET_JS" <<'PYNETJS'
+import sys
+
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+
+DECL_ANCHOR = "const callLuciBoardJSON = rpc.declare({"
+DECL_BLOCK = """const callWirelessStatus = rpc.declare({
+\tobject: 'network.wireless',
+\tmethod: 'status',
+\texpect: { '': {} }
+});
+
+"""
+
+METHOD_ANCHOR = "\t/* private */\n\tgetStatusByRoute(addr, mask) {"
+METHOD_BLOCK = """\t/** Return configured QCA VAP names reported by netifd, without driver probes. */
+\tgetWifiRuntimeIfnames() {
+\t\t// netifd supplies VAP names without probing disabled radios or creating VAPs.
+\t\treturn L.resolveDefault(callWirelessStatus(), {}).then((radios) => {
+\t\t\tconst names = Object.create(null);
+\t\t\tfor (const iface of uci.sections('wireless', 'wifi-iface')) {
+\t\t\t\tconst radio = radios[iface.device];
+\t\t\t\tif (!radio || !['qcawifi', 'qcawificfg80211'].includes(uci.get('wireless', iface.device, 'type')))
+\t\t\t\t\tcontinue;
+\t\t\t\tnames[iface['.name']] = null;
+\t\t\t\tif (!radio.up || radio.disabled || iface.disabled == '1' ||
+\t\t\t\t    uci.get('wireless', iface.device, 'disabled') == '1')
+\t\t\t\t\tcontinue;
+\t\t\t\tconst live = (radio.interfaces || []).find((net) => net.section == iface['.name']);
+\t\t\t\tif (live?.ifname)
+\t\t\t\t\tnames[iface['.name']] = live.ifname;
+\t\t\t}
+\t\t\treturn names;
+\t\t});
+\t},
+
+"""
+
+if DECL_ANCHOR not in src or METHOD_ANCHOR not in src:
+    sys.exit('luci-base network.js 锚点缺失, 无法补 getWifiRuntimeIfnames')
+
+src = src.replace(DECL_ANCHOR, DECL_BLOCK + DECL_ANCHOR, 1)
+src = src.replace(METHOD_ANCHOR, METHOD_BLOCK + METHOD_ANCHOR, 1)
+open(path, 'w', encoding='utf-8').write(src)
+PYNETJS
+        echo "local_changes: luci-base network.js 已补 getWifiRuntimeIfnames (QCA 运行时 VAP 名)"
     fi
     (cd "$BUILD_DIR" && ./scripts/feeds update -i luci >/dev/null 2>&1 || true
                  ./scripts/feeds install -f luci-mod-status rpcd-mod-luci luci-app-oui >/dev/null 2>&1 || true)
