@@ -148,7 +148,7 @@ is_interactive_terminal() {
 
 validate_build_mode() {
     case "$Build_Mod" in
-        ""|debug|container|container_debug|config_preview)
+        ""|debug|toolchain|container|container_debug|config_preview)
             return 0
             ;;
         *)
@@ -452,6 +452,14 @@ if grep -qE "^CONFIG_TARGET_x86_64=y" "$CONFIG_FILE"; then
 fi
 
 if [[ $Build_Mod == "debug" ]]; then
+    exit 0
+fi
+
+# toolchain 模式: 仅编译 tools/toolchain 并落缓存, 供正式构建热启动 (绕开 Actions 6h 限制)
+if [[ $Build_Mod == "toolchain" ]]; then
+    make download -j$(($(nproc) * 2))
+    make tools/install toolchain/install -j$(($(nproc) + 1))
+    echo "toolchain seed done."
     exit 0
 fi
 
