@@ -47,7 +47,7 @@ if ! grep -q '^src-git small8' feeds.conf.default; then
     # 仅定向安装实际需要的包(与本地构建清单一致), 禁止 -a 全量安装:
     # small8 里新增了 opkg, -a 会覆盖核心 opkg (其 Makefile 无 host 构建),
     # 导致 make 报 "No rule to make target 'package/system/opkg/host/compile'"。
-    ./scripts/feeds install -p small8 -f adguardhome chinadns-ng cups ddns-go dns2socks easytier geo2txt geoview haproxy hysteria ipt2socks luci-app-adguardhome luci-app-amlogic luci-app-cloudflarespeedtest luci-app-cupsd luci-app-ddns-go luci-app-easytier luci-app-homeproxy luci-app-istorex luci-app-mosdns luci-app-msd_lite luci-app-nikki luci-app-openclash luci-app-passwall luci-app-quickstart luci-app-ssr-plus luci-app-store luci-app-tailscale luci-lib-taskd luci-lib-xterm mihomo mosdns msd_lite naiveproxy nikki quickstart shadowsocksr-libev shadowsocks-rust simple-obfs sing-box tailscale taskd tcping trojan-plus tuic-client v2dat v2ray-core v2ray-geodata v2ray-plugin xray-core xray-plugin
+    ./scripts/feeds install -p small8 -f adguardhome chinadns-ng ddns-go dns2socks easytier geo2txt geoview haproxy hysteria ipt2socks luci-app-adguardhome luci-app-amlogic luci-app-cloudflarespeedtest luci-app-ddns-go luci-app-easytier luci-app-homeproxy luci-app-istorex luci-app-mosdns luci-app-msd_lite luci-app-nikki luci-app-openclash luci-app-passwall luci-app-quickstart luci-app-ssr-plus luci-app-store luci-app-tailscale luci-lib-taskd luci-lib-xterm mihomo mosdns msd_lite naiveproxy nikki quickstart shadowsocksr-libev shadowsocks-rust simple-obfs sing-box tailscale taskd tcping trojan-plus tuic-client v2dat v2ray-core v2ray-geodata v2ray-plugin xray-core xray-plugin
 fi
 
 # CI: kenzok8 于 2026-10-23 把 xray-core 升到 26.10.21 (go.mod 要求 go >= 1.27),
@@ -190,7 +190,7 @@ sed -i 's#^root:[^:]*:#root:$1$tbypass$zpEjhZ84aeu9SYlPOwTXB1:#' /etc/shadow
 # LuCI 的「系统→启动项」操作的就是这个链接(页面代码里就是执行
 # /etc/init.d/X enable 或 disable), 所以两边是同一个开关, 不冲突, 后写的生效。
 #
-# 特意不去动插件私有的 uci 标志(cupsd.config.enabled / unblockneteasemusic.config.enable
+# 特意不去动插件私有的 uci 标志(unblockneteasemusic.config.enable
 # 之类): 那不属于官方规范, 而且有些插件的 init 会读它 —— 例如 vlmcsd 的
 #   config_get_bool enabled "config" "enabled" "0"
 #   [ "$enabled" -eq "1" ] || return 1
@@ -200,32 +200,6 @@ for svc in miniupnpd sqm easytier shadowsocksr \
     /etc/init.d/$svc disable 2>/dev/null
     /etc/init.d/$svc stop 2>/dev/null
 done
-
-# ath11k-firmware 幽灵清单修复: ipq60xx target 默认包含但设备包已减号剔除,
-# manifest 列出而镜像缺失, 移除之保持清单一致
-sed -i 's/ath11k-firmware-ipq6018-ddwrt nss-firmware-ipq60xx/nss-firmware-ipq60xx/' "$BUILD_DIR/target/linux/qualcommax/ipq60xx/target.mk"
-# 上游仓库垃圾文件清理 (补丁残片/vim 交换文件会被打包进镜像)
-find "$BUILD_DIR/feeds/small8/luci-app-ssr-plus" -name "*.rej" -delete 2>/dev/null
-
-# cupsd init 补丁: 原版不读 cupsd.config.enabled 标志, LuCI 勾选框形同虚设
-# (取消勾选后服务照跑)。补上标准 OpenWrt 逻辑: enabled=0 时 start 直接返回。
-# easytier init 补丁: 原版 start_service 不读 easytier.enabled 标志 (同 cupsd 问题)
-for d in "$BUILD_DIR/feeds/custom_feed/luci-app-easytier" "$BUILD_DIR/feeds/small8/luci-app-easytier"; do
-    if [ -f "$d/luci-app-easytier/root/etc/init.d/easytier" ] && ! grep -q "easytier.@easytier.0..enabled" "$d/luci-app-easytier/root/etc/init.d/easytier"; then
-        sed -i '/^start_service() {$/a\  [ "$(uci -q get easytier.@easytier[0].enabled)" = "1" ] || return 0' "$d/luci-app-easytier/root/etc/init.d/easytier"
-    fi
-done
-CUPSD_INIT_PATCHED=0
-for d in "$BUILD_DIR/feeds/custom_feed/cups" "$BUILD_DIR/feeds/small8/cups"; do
-    if [ -f "$d/files/cupsd.init" ] && ! grep -q "config_get_bool enabled" "$d/files/cupsd.init"; then
-        sed -i '/^start() {$/a\  config_load cupsd
-  local enabled
-  config_get_bool enabled config enabled 1
-  [ "$enabled" = 0 ] \&\& return 0' "$d/files/cupsd.init"
-        CUPSD_INIT_PATCHED=1
-    fi
-done
-[ "$CUPSD_INIT_PATCHED" = 1 ] && echo "local_changes: cupsd init 已补 enabled 标志检查"
 
 # 修 3.4-r1 的 ACL 路径 bug (只影响状态页显示日志):
 # 它的 ACL 把日志登记为 /var/run/unblockneteasemusic/run.log, 但 /var 是指向 /tmp 的
@@ -259,27 +233,6 @@ uci commit vlmcsd
 uci set unblockneteasemusic.config.enable='1'
 uci commit unblockneteasemusic
 /etc/init.d/unblockneteasemusic enable 2>/dev/null
-# CUPS 打印服务器: 出厂启用 (用户已启用, init 已补 enabled 门控)
-uci set cupsd.config.enabled='1'
-uci commit cupsd
-# cupsd 页面保存联动: ucitrack 注册 (勾选保存后自动重启服务, 否则只写配置不生效)
-uci -q delete ucitrack.cupsd
-uci set ucitrack.cupsd=service
-uci set ucitrack.cupsd.init='cupsd'
-uci commit ucitrack
-/etc/init.d/cupsd enable
-
-# CUPS 打印服务器: 关掉自启
-# 官方机制: /etc/init.d/cupsd disable 即可(镜像里自带了 /etc/rc.d/S50cupsd, 所以它
-# 出厂就是自启的, 而它的 uci-defaults 只做了 stop、从没 disable)。
-# 另外把它的 uci 标志也设成 0 —— 这里**可以**这么做, 因为 /etc/init.d/cupsd 只有
-# START=50、完全不读 cupsd.config.enabled, 所以设 0 没有任何功能副作用, 纯粹是让
-# 那个失效的复选框不再骗人(它不勾也照样自启)。
-# 需要打印时用: /etc/init.d/cupsd enable && /etc/init.d/cupsd start
-# (要在「系统 → 启动项」里开; 页面那个复选框对自启无效)
-/etc/init.d/cupsd disable 2>/dev/null
-uci set cupsd.config.enabled='0'
-uci commit cupsd
 
 # OpenClash 内核衔接: 系统内 mihomo 软链为 clash_meta, 全新刷机免联网下载内核
 if [ -x /usr/bin/mihomo ] && [ ! -e /etc/openclash/core/clash_meta ]; then
@@ -303,6 +256,24 @@ exit 0
 EOF
 chmod 755 "$PRESET_DIR/zz_bypass_preset"
 echo "local_changes: 已写入 zz_bypass_preset (静态IP/DHCP关/DNS预配置)"
+
+# ---- 2b) 主机侧源码修补 (必须在 EOF 之后: 以前误放在上面的 heredoc 里,
+#          结果从未执行, 反而被写进设备上的预设脚本) ----
+
+# ath11k-firmware 幽灵清单修复: ipq60xx target 默认包含但设备包已减号剔除,
+# manifest 列出而镜像缺失, 移除之保持清单一致
+sed -i 's/ath11k-firmware-ipq6018-ddwrt nss-firmware-ipq60xx/nss-firmware-ipq60xx/' "$BUILD_DIR/target/linux/qualcommax/ipq60xx/target.mk"
+# 上游仓库垃圾文件清理 (补丁残片/vim 交换文件会被打包进镜像)
+find "$BUILD_DIR/feeds/small8/luci-app-ssr-plus" -name "*.rej" -delete 2>/dev/null
+
+# easytier init 补丁: 原版 start_service 不读 easytier.enabled 标志
+# (取消勾选后服务照跑), 补上标准 OpenWrt 门控
+for d in "$BUILD_DIR/feeds/custom_feed/luci-app-easytier" "$BUILD_DIR/feeds/small8/luci-app-easytier"; do
+    if [ -f "$d/luci-app-easytier/root/etc/init.d/easytier" ] && ! grep -q "easytier.@easytier.0..enabled" "$d/luci-app-easytier/root/etc/init.d/easytier"; then
+        sed -i '/^start_service() {$/a\  [ "$(uci -q get easytier.@easytier[0].enabled)" = "1" ] || return 0' "$d/luci-app-easytier/root/etc/init.d/easytier"
+        echo "local_changes: easytier init 已补 enabled 门控"
+    fi
+done
 
 # ---- 3a2) AdGuardHome 规则库纳入 sysupgrade 备份 ----
 # 上游的备份清单只含 /etc/AdGuardHome.yaml, 不含 data/ 目录下的规则库,
@@ -353,8 +324,17 @@ if [ -f "$DECONF" ]; then
 fi
 
 # ---- 4) AdGuardHome 出厂 yaml (用户提供, 2026-09-19) ----
-AGH_DIR="$BUILD_DIR/package/feeds/small8/luci-app-adguardhome"
-if [ -d "$AGH_DIR" ]; then
+# 包来源是 custom_feed(由 small8 上游同步而来), 不是 small8 直接安装:
+# 旧路径 package/feeds/small8/luci-app-adguardhome 不存在, 导致本节长期静默跳过。
+# 两处都写: package/feeds/ 是本次编译实际读的, custom_feed/ 是源工作树
+# (feeds update 会用后者重建前者, 只写一处会被下一次构建覆盖回默认值)。
+AGH_TARGETS=""
+for d in "$BUILD_DIR/package/feeds/custom_feed/luci-app-adguardhome" \
+         "$BUILD_DIR/custom_feed/luci-app-adguardhome"; do
+    [ -d "$d/root/etc" ] && AGH_TARGETS="$AGH_TARGETS $d"
+done
+if [ -n "$AGH_TARGETS" ]; then
+    for AGH_DIR in $AGH_TARGETS; do
     cat > "$AGH_DIR/root/etc/AdGuardHome.yaml" <<'AGHYAML'
 http:
   pprof:
@@ -553,7 +533,11 @@ os:
   rlimit_nofile: 0
 schema_version: 34
 AGHYAML
-    echo "local_changes: AdGuardHome 出厂 yaml 已替换 (用户配置, dns.port=5300)"
+    echo "local_changes: AdGuardHome 出厂 yaml 已替换 ($AGH_DIR, dns.port=5300)"
+    done
+else
+    echo "local_changes: !! AGH 包目录不存在, 自定义 yaml 未写入" >&2
+    exit 1
 fi
 
 
