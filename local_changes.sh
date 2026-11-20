@@ -67,6 +67,19 @@ for d in "$BUILD_DIR/feeds/custom_feed/xray-core" \
     fi
 done
 
+# 2026-11-20: small8 把 AdGuardHome 升到 1.0.0, 其 go.mod 要求 go >= 1.27.4,
+# 而 packages feed 的 golang1.27 变体仍钉在 1.27.3, 编译报
+# "go.mod requires go >= 1.27.4 (running go 1.27.3; GOTOOLCHAIN=local)"。
+# 这里把补丁号与源码 hash 一并升到 1.27.4 (hash 取自 go.dev/dl/?mode=json&include=all)。
+# 上游以后自己跟到 1.27.4+ 时, 下面的 grep 条件不成立, 自动跳过。
+GOLANG127_MK="$BUILD_DIR/feeds/packages/lang/golang/golang1.27/Makefile"
+if [ -f "$GOLANG127_MK" ] && grep -q '^GO_VERSION_PATCH:=3$' "$GOLANG127_MK"; then
+    sed -i -e 's/^GO_VERSION_PATCH:=3$/GO_VERSION_PATCH:=4/' \
+           -e 's/^PKG_HASH:=6e7749035cf360f06b2575d162ea79df9fda8ef671889e5c375f8e50777f26bb$/PKG_HASH:=73cfb8571aec0c01177687db87163d46aa20e9779672772891aa17654d9a6099/' \
+           "$GOLANG127_MK"
+    echo "local_changes: golang1.27 已从 1.27.3 升到 1.27.4 (AGH 1.0.0 要求)"
+fi
+
 # CI: 太乙固件无 WiFi (ath11k 已剔除), 但 qualcommax target 默认包带 wpad-mesh-openssl;
 # 无 WiFi 驱动时 DRIVER_11AX_SUPPORT 关闭, hostapd 无 AX 而 NSS muedca 补丁代码
 # 无宏保护, 导致 wpad-mesh-openssl 必然编译失败。从 target 默认包移除之,
