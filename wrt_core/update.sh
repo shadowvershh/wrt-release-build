@@ -36,7 +36,6 @@ source "$SCRIPT_DIR/modules/feeds.sh"
 source "$SCRIPT_DIR/modules/custom_feed.sh"
 source "$SCRIPT_DIR/modules/verify.sh"
 source "$SCRIPT_DIR/modules/docker.sh"
-source "$SCRIPT_DIR/modules/cups.sh"
 source "$SCRIPT_DIR/modules/feed_source_fixes.sh"
 source "$SCRIPT_DIR/modules/package_source_updates.sh"
 source "$SCRIPT_DIR/modules/target_fixes.sh"
@@ -127,7 +126,6 @@ stage_post_install_package_fixes() {
     # 这里处理已安装到 package/feeds/* 的包和最终一致性检查。
     verify_custom_feed_installed_paths
     docker_stack_sync_nftables_compat "$BUILD_DIR" "0"
-    fix_cups_libcups_avahi_depends
     fix_easytier_lua
     update_adguardhome
     update_script_priority

@@ -16,9 +16,6 @@ remove_unwanted_packages() {
         "chinadns-ng" "ipt2socks" "tcping" "trojan-plus" "simple-obfs" "shadowsocksr-libev"
         "dae" "daed" "mihomo" "geoview" "open-app-filter" "msd_lite"
     )
-    local packages_utils=(
-        "cups"
-    )
     for pkg in "${luci_packages[@]}"; do
         if [[ -d ./feeds/luci/applications/$pkg ]]; then
             \rm -rf ./feeds/luci/applications/$pkg
@@ -31,12 +28,6 @@ remove_unwanted_packages() {
     for pkg in "${packages_net[@]}"; do
         if [[ -d ./feeds/packages/net/$pkg ]]; then
             \rm -rf ./feeds/packages/net/$pkg
-        fi
-    done
-
-    for pkg in "${packages_utils[@]}"; do
-        if [[ -d ./feeds/packages/utils/$pkg ]]; then
-            \rm -rf ./feeds/packages/utils/$pkg
         fi
     done
 

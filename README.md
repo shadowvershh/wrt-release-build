@@ -137,10 +137,14 @@ https://github.com/kenzok8/small-package.git
 - `wrt_core/compilecfg/`：设备构建元信息 `.ini`。
 - `wrt_core/deconfig/`：设备和共享默认配置 `.config`。
 - `wrt_core/deconfig/fragments/`：可组合配置片段。
-- `wrt_core/modules/`：模块化脚本，包括仓库准备、网络重试、feeds/custom_feed、源码修正、LuCI 修正、服务修正、验证、Docker、CUPS 等静态职责模块。
+- `wrt_core/modules/`：模块化脚本，包括仓库准备、网络重试、feeds/custom_feed、源码修正、LuCI 修正、服务修正、验证、Docker 等静态职责模块。
 - `wrt_core/patches/`：补丁、默认设置、Wi-Fi 初始化、NSS 诊断、PBR 规则和其他构建时注入文件。
 
 > 以下组件已按用户要求从固件中移除（2026-11-14）：
 > - OAF（应用过滤 / OpenAppFilter）：不再安装 `luci-app-oaf` 与 `appfilter`。
 > - lucky（内网穿透/DDNS/反代）：不再安装 `lucky` 与 `luci-app-lucky`，`update_lucky` 钩子与 `patches/lucky_*.tar.gz` 一并删除。
+>
+> 2026-11-20 补充：CUPS（打印服务）已整条链路移除——`cups`/`luci-app-cupsd`
+> 不再进入 custom_feed 同步清单与 required 目录，`cups.sh` 修正模块已删除，
+> 各设备 deconfig 中的相关选择项一并清除。
 
