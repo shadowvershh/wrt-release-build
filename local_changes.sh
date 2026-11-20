@@ -53,10 +53,17 @@ fi
 # CI: kenzok8 于 2026-10-23 把 xray-core 升到 26.10.21 (go.mod 要求 go >= 1.27),
 # 其 Makefile 用默认 golang/host 变体。update.sh 已停用 sbwml 替换、恢复官方
 # 多变体 golang (含 1.27), 这里把 xray 显式钉到 golang1.27/host。
-for d in "$BUILD_DIR/feeds/custom_feed/xray-core" "$BUILD_DIR/feeds/small8/xray-core"; do
-    if [ -f "$d/Makefile" ]; then
-        sed -i 's#^PKG_BUILD_DEPENDS:=golang/host#PKG_BUILD_DEPENDS:=golang1.27/host#' "$d/Makefile"
-        echo "local_changes: xray-core Go 工具链已钉到 1.27 ($d)"
+# 2026-11-15: AdGuardHome 0.107.80 的 go.mod 同样要求 go >= 1.27.3, 不钉会拿
+# 默认的 go 1.26 编译, 报 "go.mod requires go >= 1.27.3 (running go 1.26.10)"。
+# custom_feed 由 small8 稀疏同步生成(每次 update 重建), 所以补丁必须写在本脚本里;
+# feeds/custom_feed 是指向 custom_feed 的软链, package/feeds/custom_feed 是 install 产物。
+for d in "$BUILD_DIR/feeds/custom_feed/xray-core" \
+         "$BUILD_DIR/feeds/small8/xray-core" \
+         "$BUILD_DIR/custom_feed/adguardhome" \
+         "$BUILD_DIR/package/feeds/custom_feed/adguardhome"; do
+    if [ -f "$d/Makefile" ] && grep -qE '^PKG_BUILD_DEPENDS:=golang/host$' "$d/Makefile"; then
+        sed -i 's#^PKG_BUILD_DEPENDS:=golang/host$#PKG_BUILD_DEPENDS:=golang1.27/host#' "$d/Makefile"
+        echo "local_changes: $(basename "$d") Go 工具链已钉到 1.27 ($d)"
     fi
 done
 
