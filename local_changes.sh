@@ -758,6 +758,53 @@ open(path, 'w', encoding='utf-8').write(src)
 PYNETJS
         echo "local_changes: luci-base network.js 已补 getWifiRuntimeIfnames (QCA 运行时 VAP 名)"
     fi
+    # lean 版 10_system.js 删掉了 immortalwrt 原版的温度展示(callTempInfo 与
+    # Temperature 行), 但后端 luci.getTempInfo + /sbin/tempinfo 都还在。这里只把
+    # 前端那段补回来, 保留 lean 的 disableCache / NPU-Flow / 在线主机等改动。
+    SYS_JS="$LL_DST/modules/luci-mod-status/htdocs/luci-static/resources/view/status/include/10_system.js"
+    if [ -f "$SYS_JS" ] && ! grep -q "callTempInfo" "$SYS_JS"; then
+        python3 - "$SYS_JS" <<'PYSYSJS'
+import sys
+
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+
+DECL_ANCHOR = "var callCPUUsage = rpc.declare({\n\tobject: 'luci',\n\tmethod: 'getCPUUsage'\n});"
+DECL_BLOCK = DECL_ANCHOR + """
+
+var callTempInfo = rpc.declare({
+\tobject: 'luci',
+\tmethod: 'getTempInfo'
+});"""
+
+LOAD_ANCHOR = "\t\t\tL.resolveDefault(callCPUUsage(), {}),"
+LOAD_BLOCK = LOAD_ANCHOR + "\n\t\t\tL.resolveDefault(callTempInfo(), {}),"
+
+VAR_ANCHOR = "luciversion = data[5],\n\t\t    unixtime    = data[6];"
+VAR_BLOCK = "tempinfo    = data[5],\n\t\t    luciversion = data[6],\n\t\t    unixtime    = data[7];"
+
+FIELDS_ANCHOR = "\t\t];\n\n\t\tvar table = E('table', { 'class': 'table' });"
+FIELDS_BLOCK = """\t\t];
+
+\t\tif (tempinfo.tempinfo) {
+\t\t\tfields.splice(6, 0, _('Temperature'));
+\t\t\tfields.splice(7, 0, tempinfo.tempinfo);
+\t\t}
+
+\t\tvar table = E('table', { 'class': 'table' });"""
+
+for anchor in (DECL_ANCHOR, LOAD_ANCHOR, VAR_ANCHOR, FIELDS_ANCHOR):
+    if anchor not in src:
+        sys.exit('10_system.js 锚点缺失, 无法恢复温度行')
+
+src = src.replace(DECL_ANCHOR, DECL_BLOCK, 1)
+src = src.replace(LOAD_ANCHOR, LOAD_BLOCK, 1)
+src = src.replace(VAR_ANCHOR, VAR_BLOCK, 1)
+src = src.replace(FIELDS_ANCHOR, FIELDS_BLOCK, 1)
+open(path, 'w', encoding='utf-8').write(src)
+PYSYSJS
+        echo "local_changes: 已恢复 lean overview 的温度行 (CPU/WiFi)"
+    fi
     (cd "$BUILD_DIR" && ./scripts/feeds update -i luci >/dev/null 2>&1 || true
                  ./scripts/feeds install -f luci-mod-status rpcd-mod-luci luci-app-oui >/dev/null 2>&1 || true)
     echo "local_changes: luci-lean 客户端流量监测已覆盖 feeds (luci-mod-status/rpcd-mod-luci/luci-app-oui)"

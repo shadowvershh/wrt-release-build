@@ -12,6 +12,43 @@ update_adguardhome() {
         echo "错误：从 $repo_url 克隆 luci-app-adguardhome 仓库失败" >&2
         exit 1
     fi
+
+    # GitHub API 不可达时(旁路由无代理/无外网 DNS 很常见), 原脚本直接
+    # "Failed to check latest version" 退出, 连 static.adguard.com 都用不上。
+    # 这里改成回落: 只用 static.adguard.com 的 release 固定链接下载, 再从新
+    # 二进制自身读版本比较; 不碰 beta 链接, 也不会误装预发布版。
+    local core_script="$adguardhome_dir/root/usr/share/AdGuardHome/update_core.sh"
+    if [ -f "$core_script" ] && ! grep -q "api_failed" "$core_script"; then
+        python3 - "$core_script" <<'PYAGH' || echo "警告：AdGuardHome 更新脚本补丁未应用 (上游结构变化?)" >&2
+import sys
+
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+
+OLD_ABORT = '\tif [ -z "${latest_ver}" ]; then\n\t\techo -e "\\nFailed to check latest version, please try again later."  && EXIT 1\n\tfi'
+NEW_ABORT = '\tif [ -z "${latest_ver}" ]; then\n\t\techo -e "\\nGitHub API unreachable, fallback to static.adguard.com."\n\t\tapi_failed="1"\n\t\tlatest_ver=""\n\tfi'
+
+OLD_DEC = '\tif [ "${latest_ver}"x != "${now_ver}"x ] || [ "$1" == "force" ]; then'
+NEW_DEC = '\tif [ -z "${latest_ver}" ] || [ "${latest_ver}"x != "${now_ver}"x ] || [ "$1" == "force" ]; then'
+
+OLD_LINKS = '\tgrep -v "^#" /usr/share/AdGuardHome/links.txt >/tmp/run/AdHlinks.txt'
+NEW_LINKS = '\tif [ -n "$api_failed" ]; then\n\t\techo "https://static.adguard.com/adguardhome/release/AdGuardHome_linux_${Arch}.tar.gz" >/tmp/run/AdHlinks.txt\n\telse\n\t\tgrep -v "^#" /usr/share/AdGuardHome/links.txt >/tmp/run/AdHlinks.txt\n\tfi'
+
+OLD_CHMOD = '\tchmod 755 $downloadbin'
+NEW_CHMOD = '\tchmod 755 $downloadbin\n\tif [ -z "$latest_ver" ]; then\n\t\tlatest_ver="$($downloadbin --version 2>/dev/null | grep -m 1 -oE \'v[0-9.]+\')"\n\t\t[ -z "$latest_ver" ] && latest_ver="$($downloadbin -c /dev/null --check-config 2>&1 | grep -m 1 -oE \'v[0-9.]+\')"\n\t\techo -e "Downloaded version: ${latest_ver:-unknown}, local version: ${now_ver:-none}."\n\t\tif [ -n "$now_ver" ] && [ "${latest_ver}"x = "${now_ver}"x ]; then\n\t\t\techo -e "You\'re already using the latest version."\n\t\t\trm -rf /tmp/AdGuardHomeupdate\n\t\t\tEXIT 0\n\t\tfi\n\tfi'
+
+for anchor in (OLD_ABORT, OLD_DEC, OLD_LINKS, OLD_CHMOD):
+    if anchor not in src:
+        sys.exit('update_core.sh 锚点缺失')
+
+src = src.replace(OLD_ABORT, NEW_ABORT, 1)
+src = src.replace(OLD_DEC, NEW_DEC, 1)
+src = src.replace(OLD_LINKS, NEW_LINKS, 1)
+src = src.replace(OLD_CHMOD, NEW_CHMOD, 1)
+open(path, 'w', encoding='utf-8').write(src)
+PYAGH
+        echo "service_fixes: AdGuardHome 更新脚本已加 static.adguard.com 回落"
+    fi
 }
 
 
