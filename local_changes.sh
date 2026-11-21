@@ -281,10 +281,18 @@ echo "local_changes: 已写入 zz_bypass_preset (静态IP/DHCP关/DNS预配置)"
 #          结果从未执行, 反而被写进设备上的预设脚本) ----
 
 # ath11k-firmware 幽灵清单修复: ipq60xx target 默认包含但设备包已减号剔除,
-# manifest 列出而镜像缺失, 移除之保持清单一致
-sed -i 's/ath11k-firmware-ipq6018-ddwrt nss-firmware-ipq60xx/nss-firmware-ipq60xx/' "$BUILD_DIR/target/linux/qualcommax/ipq60xx/target.mk"
-# 上游仓库垃圾文件清理 (补丁残片/vim 交换文件会被打包进镜像)
-find "$BUILD_DIR/feeds/small8/luci-app-ssr-plus" -name "*.rej" -delete 2>/dev/null
+# manifest 列出而镜像缺失, 移除之保持清单一致。
+# 注意: 改完 target.mk 必须删掉 tmp 里的旧 target 元数据, 否则 make defconfig
+# 会沿用旧的 DEFAULT_PACKAGES (CONFIG_DEFAULT_ath11k-firmware-ipq6018-ddwrt=y),
+# 幽灵包仍然会被装进 rootfs。
+TARGET_MK="$BUILD_DIR/target/linux/qualcommax/ipq60xx/target.mk"
+if [ -f "$TARGET_MK" ]; then
+    sed -i 's/ath11k-firmware-ipq6018-ddwrt[[:space:]]*//g' "$TARGET_MK"
+    rm -f "$BUILD_DIR/tmp/.config-target.in" "$BUILD_DIR/tmp/.targetinfo"
+    echo "local_changes: 已从 ipq60xx target.mk 移除幽灵 ath11k 固件, 并清理旧 target 元数据"
+fi
+# 上游仓库垃圾文件清理 (补丁残片会被 luasrc/root 整目录打包进镜像)
+find "$BUILD_DIR/custom_feed" "$BUILD_DIR/feeds/small8" -name "*.rej" -delete 2>/dev/null
 
 # easytier init 补丁: 原版 start_service 不读 easytier.enabled 标志
 # (取消勾选后服务照跑), 补上标准 OpenWrt 门控

@@ -151,6 +151,13 @@ update_ath11k_fw() {
             sed -i 's/ath11k-firmware-ipq6018\([^-[:alnum:]_]\|$\)/ath11k-firmware-ipq6018-ddwrt\1/g' "$ipq60_target"
         fi
 
+        # image/*.mk 里的设备级 DEVICE_PACKAGES 带 "-" 排除项, 也要一起改名;
+        # 否则排除项指向旧的非 ddwrt 包名, target 默认包依旧会进 manifest。
+        local ipq60_image="$BUILD_DIR/target/linux/qualcommax/image/ipq60xx.mk"
+        if [ -f "$ipq60_image" ]; then
+            sed -i 's/ath11k-firmware-ipq6018\([^-[:alnum:]_]\|$\)/ath11k-firmware-ipq6018-ddwrt\1/g' "$ipq60_image"
+        fi
+
         if [ -f "$ipq807_target" ]; then
             sed -i 's/ath11k-firmware-ipq8074\([^-[:alnum:]_]\|$\)/ath11k-firmware-ipq8074-ddwrt\1/g' "$ipq807_target"
         fi
