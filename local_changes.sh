@@ -47,7 +47,7 @@ if ! grep -q '^src-git small8' feeds.conf.default; then
     # 仅定向安装实际需要的包(与本地构建清单一致), 禁止 -a 全量安装:
     # small8 里新增了 opkg, -a 会覆盖核心 opkg (其 Makefile 无 host 构建),
     # 导致 make 报 "No rule to make target 'package/system/opkg/host/compile'"。
-    ./scripts/feeds install -p small8 -f adguardhome chinadns-ng ddns-go dns2socks easytier geo2txt geoview haproxy hysteria ipt2socks luci-app-adguardhome luci-app-amlogic luci-app-cloudflarespeedtest luci-app-ddns-go luci-app-easytier luci-app-homeproxy luci-app-istorex luci-app-mosdns luci-app-msd_lite luci-app-nikki luci-app-openclash luci-app-passwall luci-app-quickstart luci-app-ssr-plus luci-app-store luci-app-tailscale luci-lib-taskd luci-lib-xterm mihomo mosdns msd_lite naiveproxy nikki quickstart shadowsocksr-libev shadowsocks-rust simple-obfs sing-box tailscale taskd tcping trojan-plus tuic-client v2dat v2ray-core v2ray-geodata v2ray-plugin xray-core xray-plugin
+    ./scripts/feeds install -p small8 -f adguardhome chinadns-ng ddns-go dns2socks easytier geo2txt geoview haproxy hysteria ipt2socks luci-app-adguardhome luci-app-amlogic luci-app-cloudflarespeedtest luci-app-ddns-go luci-app-easytier luci-app-homeproxy luci-app-istorex luci-app-mosdns luci-app-msd_lite luci-app-nikki luci-app-openclash luci-app-passwall luci-app-quickstart luci-app-ssr-plus luci-app-store luci-app-tailscale luci-lib-taskd luci-lib-xterm mihomo mosdns msd_lite naiveproxy nikki quickstart shadowsocksr-libev shadowsocks-rust simple-obfs sing-box tailscale taskd tcping trojan-plus tuic-client v2dat v2ray-core v2ray-geodata v2ray-plugin xray-core xray-plugin fastnet linkease-app-entry luci-lib-linkeaseauth
 fi
 
 # CI: kenzok8 于 2026-10-23 把 xray-core 升到 26.10.21 (go.mod 要求 go >= 1.27),
@@ -302,6 +302,50 @@ for d in "$BUILD_DIR/feeds/custom_feed/luci-app-easytier" "$BUILD_DIR/feeds/smal
         echo "local_changes: easytier init 已补 enabled 门控"
     fi
 done
+
+# ---- 2c) 修复 LuCI 概览页温度不显示 ----
+# overview 依赖 ACL 组 luci-mod-status-index, 但该组只授权了 getCPUInfo/getCPUUsage,
+# 没有 getTempInfo; getTempInfo 在 luci-mod-status-autocore 组, 页面并不引用该组,
+# 于是前端调用被拒, tempinfo 为空, 温度整行不渲染。把 getTempInfo 补进 index 组。
+for d in "$BUILD_DIR/feeds/luci/modules/luci-mod-status" \
+         "$BUILD_DIR/feeds/luci/modules/luci-mod-status.imm"; do
+    ACL="$d/root/usr/share/rpcd/acl.d/luci-mod-status-index.json"
+    if [ -f "$ACL" ] && ! grep -q '"getTempInfo"' "$ACL"; then
+        sed -i 's/"getCPUUsage" ]/"getCPUUsage", "getTempInfo" ]/' "$ACL"
+        echo "local_changes: 已修复 LuCI 概览温度 ACL ($d)"
+    fi
+done
+
+# ---- 2d) FastNet 的 iStore 元数据/入口脚本 ----
+# QuickStart 的「外网测速」入口不是直接调 fastnet, 而是先查 iStore 已安装列表
+# (/store/installed), 再经 /store/entrysh 解析启动地址。fastnet 是普通 opkg 包,
+# 不带 iStore 元数据, 于是 QuickStart 认为它没装并尝试在线安装 app-meta-fastnet,
+# 失败后报「暂时无法打开测速」。补一份 meta + entrysh 即可。
+FN_META="$BUILD_DIR/package/base-files/files/usr/lib/opkg/meta"
+FN_ENTRY="$BUILD_DIR/package/base-files/files/usr/libexec/istoree"
+mkdir -p "$FN_META" "$FN_ENTRY"
+cat > "$FN_META/fastnet.json" <<'FNJSON'
+{
+  "name": "fastnet",
+  "title": "FastNet",
+  "title_en": "FastNet",
+  "version": "0.8.10",
+  "description": "外网测速、NAT 与 IPv6 检测",
+  "description_en": "Internet speed, NAT and IPv6 diagnostics",
+  "flags": ["entrysh"],
+  "uci": "fastnet"
+}
+FNJSON
+cat > "$FN_ENTRY/fastnet.sh" <<'FNSH'
+#!/bin/sh
+if pidof FastNet >/dev/null 2>&1; then
+    echo "{\"app\":\"fastnet\",\"running\":true,\"deployed\":true,\"protocol\":\"http\",\"web\":\":3200/\"}"
+else
+    echo "{\"app\":\"fastnet\",\"running\":false,\"deployed\":true}"
+fi
+FNSH
+chmod 755 "$FN_ENTRY/fastnet.sh"
+echo "local_changes: 已写入 FastNet 的 iStore meta 与 entrysh"
 
 # ---- 3a2) AdGuardHome 规则库纳入 sysupgrade 备份 ----
 # 上游的备份清单只含 /etc/AdGuardHome.yaml, 不含 data/ 目录下的规则库,
